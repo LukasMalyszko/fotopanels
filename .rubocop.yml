@@ -56,6 +56,19 @@ Style/StringLiterals:
   Enabled: true
   EnforcedStyle: single_quotes
 
+Style/QuotedSymbols:
+  Enabled: true
+  EnforcedStyle: single_quotes
+
 # Disable script permission check
 Lint/ScriptPermission:
   Enabled: false
+
+Lint/SymbolConversion:
+  Enabled: true
+  EnforcedStyle: consistent
+
+# Layout preferences
+Layout/FirstArrayElementIndentation:
+  Enabled: true
+  EnforcedStyle: consistent

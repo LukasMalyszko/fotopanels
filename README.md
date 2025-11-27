@@ -40,10 +40,15 @@ The solution follows SOLID principles with a modular, extensible architecture.
 
 1. **Clone the repository**
    ```bash
-   cd /home/lukasz/Projects/fotopanels
+   gh repo clone LukasMalyszko/fotopanels
    ```
 
-2. **Install dependencies**
+2. **Navigate to repository**
+   ```bash
+   cd fotopanels
+   ```
+
+3. **Install dependencies**
    ```bash
    bundle install
    ```
