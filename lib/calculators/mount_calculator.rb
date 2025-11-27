@@ -44,10 +44,10 @@ module Calculators
       return [] if available_rafters.empty?
 
       selected_rafters = select_rafters_for_panel(panel, available_rafters)
-      
+
       # Create mounts at the center of the panel vertically
       mount_y = panel.y + (panel.height / 2.0)
-      
+
       selected_rafters.map do |rafter_x|
         Models::Mount.new(x: rafter_x, y: mount_y)
       end
@@ -87,64 +87,42 @@ module Calculators
     def select_rafters_for_panel(panel, available_rafters)
       return available_rafters if available_rafters.empty?
 
-      selected = []
-      
-      # Start with the first available rafter
-      selected << available_rafters.first
-      
-      # Check cantilever from left edge
-      left_overhang = available_rafters.first - panel.x
-      if left_overhang > CANTILEVER_LIMIT
-        # Need an additional support closer to the edge if possible
-        # This shouldn't happen with proper rafter spacing, but handle it
-      end
+      selected = [available_rafters.first]
 
-      # Add rafters to satisfy span limit
       available_rafters.each do |rafter_x|
         next if selected.include?(rafter_x)
-        
-        last_selected = selected.last
-        span = rafter_x - last_selected
-        
-        if span <= SPAN_LIMIT
-          # Check if we need this rafter for the next span
-          remaining_rafters = available_rafters.select { |r| r > rafter_x }
-          
-          if remaining_rafters.empty?
-            # This is potentially the last rafter
-            right_overhang = panel.right_edge - rafter_x
-            if right_overhang <= CANTILEVER_LIMIT
-              selected << rafter_x
-            else
-              # We need this rafter to reduce cantilever
-              selected << rafter_x
-            end
-          else
-            # Check if we can skip this rafter
-            next_rafter = remaining_rafters.first
-            span_to_next = next_rafter - last_selected
-            
-            if span_to_next > SPAN_LIMIT
-              # We need this rafter
-              selected << rafter_x
-            end
-          end
-        else
-          # Span exceeded, must add this rafter
-          selected << rafter_x
-        end
+
+        add_rafter_if_needed(selected, rafter_x, available_rafters, panel)
       end
 
-      # Ensure last rafter satisfies cantilever limit
-      right_overhang = panel.right_edge - selected.last
-      if right_overhang > CANTILEVER_LIMIT
-        # Add the last available rafter if not already selected
-        unless selected.include?(available_rafters.last)
-          selected << available_rafters.last
-        end
-      end
-
+      ensure_cantilever_satisfied(selected, available_rafters, panel)
       selected.sort
+    end
+
+    def add_rafter_if_needed(selected, rafter_x, available_rafters, panel)
+      span = rafter_x - selected.last
+
+      return unless span > SPAN_LIMIT || needs_rafter_for_next_span?(rafter_x, selected.last, available_rafters, panel)
+
+      selected << rafter_x
+    end
+
+    def needs_rafter_for_next_span?(current_rafter, last_selected, available_rafters, panel)
+      remaining = available_rafters.select { |r| r > current_rafter }
+
+      if remaining.empty?
+        (panel.right_edge - current_rafter) > CANTILEVER_LIMIT
+      else
+        (remaining.first - last_selected) > SPAN_LIMIT
+      end
+    end
+
+    def ensure_cantilever_satisfied(selected, available_rafters, panel)
+      right_overhang = panel.right_edge - selected.last
+      return unless right_overhang > CANTILEVER_LIMIT
+      return if selected.include?(available_rafters.last)
+
+      selected << available_rafters.last
     end
   end
 end

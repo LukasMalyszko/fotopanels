@@ -17,7 +17,7 @@ RSpec.describe Calculators::MountCalculator do
 
       it 'calculates mounts aligned with rafters' do
         mounts = calculator.calculate
-        
+
         expect(mounts).not_to be_empty
         mounts.each do |mount|
           expect(mount.x % 16).to be_within(0.01).of(0)
@@ -26,7 +26,7 @@ RSpec.describe Calculators::MountCalculator do
 
       it 'places mounts at the vertical center of the panel' do
         mounts = calculator.calculate
-        
+
         expected_y = panel.y + (panel.height / 2.0)
         mounts.each do |mount|
           expect(mount.y).to be_within(0.01).of(expected_y)
@@ -35,11 +35,11 @@ RSpec.describe Calculators::MountCalculator do
 
       it 'respects edge clearance constraint' do
         mounts = calculator.calculate
-        
+
         mounts.each do |mount|
           distance_from_left = mount.x - panel.x
           distance_from_right = panel.right_edge - mount.x
-          
+
           expect(distance_from_left).to be >= described_class::EDGE_CLEARANCE
           expect(distance_from_right).to be >= described_class::EDGE_CLEARANCE
         end
@@ -47,13 +47,13 @@ RSpec.describe Calculators::MountCalculator do
 
       it 'respects cantilever limit' do
         mounts = calculator.calculate
-        
+
         first_mount_x = mounts.min_by(&:x).x
         last_mount_x = mounts.max_by(&:x).x
-        
+
         left_overhang = first_mount_x - panel.x
         right_overhang = panel.right_edge - last_mount_x
-        
+
         expect(left_overhang).to be <= described_class::CANTILEVER_LIMIT
         expect(right_overhang).to be <= described_class::CANTILEVER_LIMIT
       end
@@ -77,14 +77,14 @@ RSpec.describe Calculators::MountCalculator do
 
       it 'calculates mounts for all panels' do
         mounts = calculator.calculate
-        
+
         # Should have mounts for each panel
         expect(mounts.size).to be >= panels.size
       end
 
       it 'returns unique mount positions' do
         mounts = calculator.calculate
-        
+
         expect(mounts.uniq.size).to eq(mounts.size)
       end
     end
@@ -98,9 +98,9 @@ RSpec.describe Calculators::MountCalculator do
           rafter_spacing: 16,
           first_rafter_x: 8
         )
-        
+
         mounts = calculator.calculate
-        
+
         mounts.each do |mount|
           expect((mount.x - 8) % 16).to be_within(0.01).of(0)
         end
@@ -112,9 +112,9 @@ RSpec.describe Calculators::MountCalculator do
           rafter_spacing: 20,
           first_rafter_x: 0
         )
-        
+
         mounts = calculator.calculate
-        
+
         mounts.each do |mount|
           expect(mount.x % 20).to be_within(0.01).of(0)
         end

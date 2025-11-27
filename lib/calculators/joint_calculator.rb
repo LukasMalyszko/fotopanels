@@ -108,12 +108,12 @@ module Calculators
         # Find panels that share this corner point
         panels_at_corner = find_panels_at_corner(corner_x, corner_y)
 
-        if panels_at_corner.size >= 2
-          corner_key = [corner_x.round(2), corner_y.round(2)]
-          unless processed.include?(corner_key)
-            joints << Models::Joint.new(x: corner_x, y: corner_y)
-            processed.add(corner_key)
-          end
+        next unless panels_at_corner.size >= 2
+
+        corner_key = [corner_x.round(2), corner_y.round(2)]
+        unless processed.include?(corner_key)
+          joints << Models::Joint.new(x: corner_x, y: corner_y)
+          processed.add(corner_key)
         end
       end
 
@@ -126,7 +126,7 @@ module Calculators
     # @param y [Float] Y-coordinate of the corner
     # @return [Array<Models::Panel>] Panels at this corner
     def find_panels_at_corner(x, y)
-      tolerance = 0.5  # Allow small tolerance for corner matching
+      tolerance = 0.5 # Allow small tolerance for corner matching
 
       @panels.select do |panel|
         # Check if any corner of this panel matches the given point

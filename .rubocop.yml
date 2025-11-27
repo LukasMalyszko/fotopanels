@@ -1,0 +1,61 @@
+# RuboCop configuration for Solar Panel Calculator
+
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 2.7
+  Exclude:
+    - 'vendor/**/*'
+    - '.bundle/**/*'
+  SuggestExtensions: false
+
+# Allow up to 20 lines per method
+Metrics/MethodLength:
+  Max: 20
+
+# Allow up to 120 characters per line
+Layout/LineLength:
+  Max: 120
+
+# Allow up to 150 lines per class
+Metrics/ClassLength:
+  Max: 150
+
+# Allow up to 30 lines per block (exclude specs)
+Metrics/BlockLength:
+  Max: 30
+  Exclude:
+    - 'spec/**/*'
+    - 'Rakefile'
+
+# Allow ABC complexity for complex calculations
+Metrics/AbcSize:
+  Max: 40
+
+# Allow cyclomatic complexity for algorithms
+Metrics/CyclomaticComplexity:
+  Max: 15
+
+# Allow perceived complexity for algorithms
+Metrics/PerceivedComplexity:
+  Max: 15
+
+# Allow single-letter parameter names for coordinates (x, y)
+Naming/MethodParameterName:
+  AllowedNames:
+    - x
+    - y
+
+# Style preferences
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+
+Style/StringLiterals:
+  Enabled: true
+  EnforcedStyle: single_quotes
+
+# Disable script permission check
+Lint/ScriptPermission:
+  Enabled: false

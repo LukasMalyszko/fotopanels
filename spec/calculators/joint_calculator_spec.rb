@@ -16,13 +16,13 @@ RSpec.describe Calculators::JointCalculator do
 
       it 'creates joints between adjacent panels' do
         joints = calculator.calculate
-        
+
         expect(joints).not_to be_empty
       end
 
       it 'places joint between the panels' do
         joints = calculator.calculate
-        
+
         # Joint should be between the two panels
         joint = joints.first
         expect(joint.x).to be > panels[0].right_edge
@@ -41,13 +41,13 @@ RSpec.describe Calculators::JointCalculator do
 
       it 'creates joints between vertically stacked panels' do
         joints = calculator.calculate
-        
+
         expect(joints).not_to be_empty
       end
 
       it 'places joint between the panels vertically' do
         joints = calculator.calculate
-        
+
         # Joint should be between the two panels vertically
         joint = joints.first
         expect(joint.y).to be > panels[0].bottom_edge
@@ -68,14 +68,14 @@ RSpec.describe Calculators::JointCalculator do
 
       it 'creates corner joint where 4 panels meet' do
         joints = calculator.calculate
-        
+
         # Should have joints for horizontal, vertical, and corner connections
         expect(joints.size).to be >= 1
       end
 
       it 'creates unique joints only' do
         joints = calculator.calculate
-        
+
         expect(joints.uniq.size).to eq(joints.size)
       end
     end
@@ -91,7 +91,7 @@ RSpec.describe Calculators::JointCalculator do
 
       it 'does not create joints between distant panels' do
         joints = calculator.calculate
-        
+
         expect(joints).to be_empty
       end
     end
@@ -111,7 +111,7 @@ RSpec.describe Calculators::JointCalculator do
 
       it 'creates multiple joints for complex layout' do
         joints = calculator.calculate
-        
+
         expect(joints.size).to be >= 4
       end
     end

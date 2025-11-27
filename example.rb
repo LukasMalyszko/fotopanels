@@ -18,13 +18,13 @@ panels_data = [
   { x: 90.1, y: 143.2 }
 ]
 
-puts "Solar Panel Mount and Joint Calculator"
-puts "=" * 50
+puts 'Solar Panel Mount and Joint Calculator'
+puts '=' * 50
 puts "\nInput: #{panels_data.size} panels"
 puts "\nPanel dimensions: 44.7 x 71.1"
-puts "Rafter spacing: 16 units"
-puts "First rafter at: x = 0"
-puts "\n" + "=" * 50
+puts 'Rafter spacing: 16 units'
+puts 'First rafter at: x = 0'
+puts "\n#{'=' * 50}"
 
 # Calculate mounts and joints
 result = SolarPanelCalculator.calculate(
@@ -34,18 +34,18 @@ result = SolarPanelCalculator.calculate(
 )
 
 puts "\n📍 MOUNTS (#{result[:mounts].size} total)"
-puts "-" * 50
+puts '-' * 50
 result[:mounts].sort_by { |m| [m[:y], m[:x]] }.each_with_index do |mount, index|
   puts "  #{index + 1}. x: #{mount[:x].round(2)}, y: #{mount[:y].round(2)}"
 end
 
 puts "\n🔗 JOINTS (#{result[:joints].size} total)"
-puts "-" * 50
+puts '-' * 50
 result[:joints].sort_by { |j| [j[:y], j[:x]] }.each_with_index do |joint, index|
   puts "  #{index + 1}. x: #{joint[:x].round(2)}, y: #{joint[:y].round(2)}"
 end
 
-puts "\n" + "=" * 50
+puts "\n#{'=' * 50}"
 puts "\n💾 Saving results to output.json..."
 
 File.write('output.json', JSON.pretty_generate(result))
