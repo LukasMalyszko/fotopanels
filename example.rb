@@ -23,14 +23,14 @@ puts '=' * 50
 puts "\nInput: #{panels_data.size} panels"
 puts "\nPanel dimensions: 44.7 x 71.1"
 puts 'Rafter spacing: 16 units'
-puts 'First rafter at: x = 0'
+puts 'First rafter at: x = 10'
 puts "\n#{'=' * 50}"
 
 # Calculate mounts and joints
 result = SolarPanelCalculator.calculate(
   panels_data,
   rafter_spacing: 16,
-  first_rafter_x: 0
+  first_rafter_x: 10
 )
 
 puts "\n📍 MOUNTS (#{result[:mounts].size} total)"

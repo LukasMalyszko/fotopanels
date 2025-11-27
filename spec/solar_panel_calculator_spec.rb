@@ -57,11 +57,11 @@ RSpec.describe SolarPanelCalculator do
       end
 
       it 'calculates mounts aligned with rafters' do
-        result = described_class.calculate(panels_data, first_rafter_x: 0, rafter_spacing: 16)
+        result = described_class.calculate(panels_data, first_rafter_x: 10, rafter_spacing: 16)
 
-        # All mounts should be at rafter positions (multiples of 16)
+        # All mounts should be at rafter positions (10 + multiples of 16)
         result[:mounts].each do |mount|
-          expect(mount[:x] % 16).to be_within(0.01).of(0)
+          expect((mount[:x] - 10) % 16).to be_within(0.01).of(0)
         end
       end
 
@@ -131,7 +131,7 @@ RSpec.describe SolarPanelCalculator do
       let(:panels_data) { [{ x: 10, y: 0 }] }
 
       it 'accepts custom rafter spacing' do
-        result = described_class.calculate(panels_data, rafter_spacing: 20, first_rafter_x: 0)
+        result = described_class.calculate(panels_data, rafter_spacing: 20, first_rafter_x: 10)
 
         expect(result).to have_key(:mounts)
         expect(result[:mounts]).not_to be_empty

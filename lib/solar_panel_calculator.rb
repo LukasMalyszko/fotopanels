@@ -29,14 +29,14 @@ class SolarPanelCalculator
   #
   # @param panels_data [Array<Hash>] Array of panel positions with :x and :y keys
   # @param rafter_spacing [Numeric] Distance between rafters (default: 16)
-  # @param first_rafter_x [Numeric] X-coordinate of the first rafter (default: 0)
+  # @param first_rafter_x [Numeric] X-coordinate of the first rafter (default: 10)
   # @return [Hash] Hash with :mounts and :joints arrays
   # @raise [InvalidInputError] if input data is invalid
-  def self.calculate(panels_data, rafter_spacing: 16, first_rafter_x: 0)
+  def self.calculate(panels_data, rafter_spacing: 16, first_rafter_x: 10)
     new(panels_data, rafter_spacing, first_rafter_x).calculate
   end
 
-  def initialize(panels_data, rafter_spacing = 16, first_rafter_x = 0)
+  def initialize(panels_data, rafter_spacing = 16, first_rafter_x = 10)
     @panels_data = panels_data
     @rafter_spacing = rafter_spacing
     @first_rafter_x = first_rafter_x

@@ -3,144 +3,104 @@
 require_relative '../models/joint'
 
 module Calculators
-  # Calculates joint positions between adjacent solar panels
   class JointCalculator
-    MAX_HORIZONTAL_GAP = 1  # Maximum gap for horizontal joints
-    MAX_VERTICAL_GAP = 1    # Maximum gap for vertical joints
+    MAX_GAP = 1.0
 
-    # @param panels [Array<Models::Panel>] Array of panel objects
     def initialize(panels:)
       @panels = panels
+      @joints = []
+      @seen = {}
     end
 
-    # Calculate all joint positions
-    #
-    # @return [Array<Models::Joint>] Array of unique joint objects
+    # @return [Array<Models::Joint>]
     def calculate
-      joints = []
-
-      # Find horizontal joints (side-by-side panels)
-      joints.concat(calculate_horizontal_joints)
-
-      # Find vertical joints (stacked panels)
-      joints.concat(calculate_vertical_joints)
-
-      # Find corner joints (4-way connections)
-      joints.concat(calculate_corner_joints)
-
-      joints.uniq
+      index_panels
+      horizontal_joints
+      vertical_joints
+      four_way_joints
+      @joints.uniq
     end
 
     private
 
-    # Calculate joints between horizontally adjacent panels
-    #
-    # @return [Array<Models::Joint>] Horizontal joints
-    def calculate_horizontal_joints
-      joints = []
+    # Group panels by y and x to speed up adjacency lookups
+    def index_panels
+      @by_row = @panels.group_by(&:y)
+      @by_col = @panels.group_by(&:x)
+    end
 
-      @panels.each do |panel1|
-        @panels.each do |panel2|
-          next if panel1 == panel2
-          next unless panel1.horizontally_adjacent?(panel2, max_gap: MAX_HORIZONTAL_GAP)
+    # Horizontal adjacency: side-by-side
+    def horizontal_joints
+      @by_row.each_value do |row|
+        row.combination(2).each do |p1, p2|
+          next unless (p1.right_edge - p2.x).abs < MAX_GAP ||
+                      (p2.right_edge - p1.x).abs < MAX_GAP
 
-          # Joint is placed at the midpoint between panels, vertically centered on overlap
-          joint_x = if panel1.x < panel2.x
-                      (panel1.right_edge + panel2.x) / 2.0
+          overlap_top    = [p1.y, p2.y].max
+          overlap_bottom = [p1.bottom_edge, p2.bottom_edge].min
+          next if overlap_bottom <= overlap_top
+
+          joint_x = if p1.x < p2.x
+                      (p1.right_edge + p2.x) / 2.0
                     else
-                      (panel2.right_edge + panel1.x) / 2.0
+                      (p2.right_edge + p1.x) / 2.0
                     end
 
-          # Find vertical overlap range
-          overlap_top = [panel1.y, panel2.y].max
-          overlap_bottom = [panel1.bottom_edge, panel2.bottom_edge].min
           joint_y = (overlap_top + overlap_bottom) / 2.0
 
-          joints << Models::Joint.new(x: joint_x, y: joint_y)
+          add_joint(joint_x, joint_y)
         end
       end
-
-      joints
     end
 
-    # Calculate joints between vertically adjacent panels
-    #
-    # @return [Array<Models::Joint>] Vertical joints
-    def calculate_vertical_joints
-      joints = []
+    # Vertical adjacency: stacked panels
+    def vertical_joints
+      @by_col.each_value do |col|
+        col.combination(2).each do |p1, p2|
+          next unless (p1.bottom_edge - p2.y).abs < MAX_GAP ||
+                      (p2.bottom_edge - p1.y).abs < MAX_GAP
 
-      @panels.each do |panel1|
-        @panels.each do |panel2|
-          next if panel1 == panel2
-          next unless panel1.vertically_adjacent?(panel2, max_gap: MAX_VERTICAL_GAP)
+          overlap_left  = [p1.x, p2.x].max
+          overlap_right = [p1.right_edge, p2.right_edge].min
+          next if overlap_right <= overlap_left
 
-          # Joint is placed at the midpoint between panels, horizontally centered on overlap
-          joint_y = if panel1.y < panel2.y
-                      (panel1.bottom_edge + panel2.y) / 2.0
+          joint_y = if p1.y < p2.y
+                      (p1.bottom_edge + p2.y) / 2.0
                     else
-                      (panel2.bottom_edge + panel1.y) / 2.0
+                      (p2.bottom_edge + p1.y) / 2.0
                     end
 
-          # Find horizontal overlap range
-          overlap_left = [panel1.x, panel2.x].max
-          overlap_right = [panel1.right_edge, panel2.right_edge].min
           joint_x = (overlap_left + overlap_right) / 2.0
 
-          joints << Models::Joint.new(x: joint_x, y: joint_y)
+          add_joint(joint_x, joint_y)
         end
       end
-
-      joints
     end
 
-    # Calculate corner joints where 4 panels meet
-    #
-    # @return [Array<Models::Joint>] Corner joints
-    def calculate_corner_joints
-      joints = []
-      processed = Set.new
+    # 4-way joints: intersection of 2 horizontal and 2 vertical adjacencies
+    def four_way_joints
+      # Build a fast lookup of joints placed on horizontal/vertical lines
+      joints_by_x = @joints.group_by { |j| j.x.round(3) }
+      joints_by_y = @joints.group_by { |j| j.y.round(3) }
 
-      @panels.each do |panel|
-        # Check bottom-right corner
-        corner_x = panel.right_edge
-        corner_y = panel.bottom_edge
+      joints_by_x.each do |jx, column|
+        joints_by_y.each_key do |jy|
+          # If there is a joint on this X and also on this Y,
+          # it means horizontal + vertical edges cross → 4-way intersection.
+          intersection = column.find { |cj| cj.y.round(3) == jy }
+          next unless intersection
 
-        # Find panels that share this corner point
-        panels_at_corner = find_panels_at_corner(corner_x, corner_y)
-
-        next unless panels_at_corner.size >= 2
-
-        corner_key = [corner_x.round(2), corner_y.round(2)]
-        unless processed.include?(corner_key)
-          joints << Models::Joint.new(x: corner_x, y: corner_y)
-          processed.add(corner_key)
+          add_joint(jx, jy) # will dedupe automatically
         end
       end
-
-      joints
     end
 
-    # Find all panels that meet at a specific corner point
-    #
-    # @param x [Float] X-coordinate of the corner
-    # @param y [Float] Y-coordinate of the corner
-    # @return [Array<Models::Panel>] Panels at this corner
-    def find_panels_at_corner(x, y)
-      tolerance = 0.5 # Allow small tolerance for corner matching
+    def add_joint(x, y)
+      key = [x.round(3), y.round(3)]
+      return if @seen[key]
 
-      @panels.select do |panel|
-        # Check if any corner of this panel matches the given point
-        corners = [
-          [panel.x, panel.y],                           # top-left
-          [panel.right_edge, panel.y],                  # top-right
-          [panel.x, panel.bottom_edge],                 # bottom-left
-          [panel.right_edge, panel.bottom_edge]         # bottom-right
-        ]
-
-        corners.any? do |cx, cy|
-          (cx - x).abs < tolerance && (cy - y).abs < tolerance
-        end
-      end
+      @seen[key] = true
+      @joints << Models::Joint.new(x: x, y: y)
     end
   end
 end

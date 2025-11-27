@@ -11,7 +11,7 @@ RSpec.describe Calculators::MountCalculator do
         described_class.new(
           panels: [panel],
           rafter_spacing: 16,
-          first_rafter_x: 0
+          first_rafter_x: 10
         )
       end
 
@@ -20,7 +20,7 @@ RSpec.describe Calculators::MountCalculator do
 
         expect(mounts).not_to be_empty
         mounts.each do |mount|
-          expect(mount.x % 16).to be_within(0.01).of(0)
+          expect((mount.x - 10) % 16).to be_within(0.01).of(0)
         end
       end
 
@@ -71,7 +71,7 @@ RSpec.describe Calculators::MountCalculator do
         described_class.new(
           panels: panels,
           rafter_spacing: 16,
-          first_rafter_x: 0
+          first_rafter_x: 10
         )
       end
 
