@@ -1,0 +1,30 @@
+# Ignore bundler config and installed gems
+/.bundle/
+/vendor/bundle/
+
+# Ignore test coverage reports
+/coverage/
+
+# Ignore RSpec examples status
+spec/examples.txt
+
+# Ignore output files
+output.json
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Ignore Ruby version files (if using version managers)
+.ruby-version
+.ruby-gemset
+
+# Ignore log files
+*.log
