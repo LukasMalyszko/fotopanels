@@ -45,8 +45,8 @@ module Calculators
 
       selected_rafters = select_rafters_for_panel(panel, available_rafters)
 
-      # Create mounts at the center of the panel vertically
-      mount_y = panel.y + (panel.height / 2.0)
+      # Create mounts at the top edge of the panel
+      mount_y = panel.y
 
       selected_rafters.map do |rafter_x|
         Models::Mount.new(x: rafter_x, y: mount_y)

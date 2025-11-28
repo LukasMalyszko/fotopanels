@@ -24,10 +24,10 @@ RSpec.describe Calculators::MountCalculator do
         end
       end
 
-      it 'places mounts at the vertical center of the panel' do
+      it 'places mounts at the top edge of the panel' do
         mounts = calculator.calculate
 
-        expected_y = panel.y + (panel.height / 2.0)
+        expected_y = panel.y
         mounts.each do |mount|
           expect(mount.y).to be_within(0.01).of(expected_y)
         end
