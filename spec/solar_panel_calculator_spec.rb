@@ -88,16 +88,15 @@ RSpec.describe SolarPanelCalculator do
         ]
       end
 
-      it 'creates joints between horizontally adjacent panels' do
+      it 'creates joints at panel corners' do
         result = described_class.calculate(panels_data)
 
         # Should have at least one joint between the two panels
         expect(result[:joints].size).to be >= 1
 
-        # Joint should be between the panels horizontally
+        # Joint should be at the corner where panels meet
         joint = result[:joints].first
-        expect(joint[:x]).to be > 44.7  # After first panel
-        expect(joint[:x]).to be < 45.05 # Before second panel
+        expect(joint[:x]).to be_within(0.5).of(44.7) # At corner of first panel
       end
     end
 

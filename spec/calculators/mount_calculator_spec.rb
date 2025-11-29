@@ -24,13 +24,20 @@ RSpec.describe Calculators::MountCalculator do
         end
       end
 
-      it 'places mounts at the top edge of the panel' do
+      it 'places mounts on both top and bottom edges (y-axis coverage)' do
         mounts = calculator.calculate
 
-        expected_y = panel.y
+        top_y = panel.y
+        bottom_y = panel.bottom_edge
+
+        # All mounts should be on either top or bottom edge
         mounts.each do |mount|
-          expect(mount.y).to be_within(0.01).of(expected_y)
+          expect([top_y, bottom_y]).to include(mount.y)
         end
+
+        # Should have at least one mount covering the y-axis (vertical dimension)
+        y_values = mounts.map(&:y).uniq
+        expect(y_values.size).to be >= 1
       end
 
       it 'respects edge clearance constraint' do

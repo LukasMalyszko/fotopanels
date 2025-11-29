@@ -3,104 +3,107 @@
 require_relative '../models/joint'
 
 module Calculators
+  # Calculates joint positions at panel corners
   class JointCalculator
-    MAX_GAP = 1.0
+    CORNER_PROXIMITY = 0.5 # Corners within this distance are joined
 
     def initialize(panels:)
       @panels = panels
-      @joints = []
-      @seen = {}
     end
 
     # @return [Array<Models::Joint>]
     def calculate
-      index_panels
-      horizontal_joints
-      vertical_joints
-      four_way_joints
-      @joints.uniq
+      joints = []
+      seen = Set.new
+
+      @panels.each do |panel|
+        # Check all four corners of each panel (excluding top-left which is never interior)
+        corners = [
+          { x: panel.right_edge, y: panel.y },                # top-right
+          { x: panel.x, y: panel.bottom_edge },               # bottom-left
+          { x: panel.right_edge, y: panel.bottom_edge }       # bottom-right
+        ]
+
+        corners.each do |corner|
+          # Check if this corner is shared with at least 1 OTHER panel (making it interior)
+          # Count must be >= 2 (current panel + at least 1 other)
+          touching_count = count_panels_at_corner(corner)
+          next unless touching_count >= 2
+
+          key = [corner[:x].round(2), corner[:y].round(2)]
+          unless seen.include?(key)
+            joints << Models::Joint.new(x: corner[:x], y: corner[:y])
+            seen.add(key)
+          end
+        end
+      end
+
+      merge_nearby_joints(joints)
     end
 
     private
 
-    # Group panels by y and x to speed up adjacency lookups
-    def index_panels
-      @by_row = @panels.group_by(&:y)
-      @by_col = @panels.group_by(&:x)
-    end
+    # Count how many panels have a corner near this location
+    def count_panels_at_corner(corner)
+      count = 0
 
-    # Horizontal adjacency: side-by-side
-    def horizontal_joints
-      @by_row.each_value do |row|
-        row.combination(2).each do |p1, p2|
-          next unless (p1.right_edge - p2.x).abs < MAX_GAP ||
-                      (p2.right_edge - p1.x).abs < MAX_GAP
+      @panels.each do |panel|
+        panel_corners = [
+          { x: panel.x, y: panel.y },                    # top-left
+          { x: panel.right_edge, y: panel.y },           # top-right
+          { x: panel.x, y: panel.bottom_edge },          # bottom-left
+          { x: panel.right_edge, y: panel.bottom_edge }  # bottom-right
+        ]
 
-          overlap_top    = [p1.y, p2.y].max
-          overlap_bottom = [p1.bottom_edge, p2.bottom_edge].min
-          next if overlap_bottom <= overlap_top
-
-          joint_x = if p1.x < p2.x
-                      (p1.right_edge + p2.x) / 2.0
-                    else
-                      (p2.right_edge + p1.x) / 2.0
-                    end
-
-          joint_y = (overlap_top + overlap_bottom) / 2.0
-
-          add_joint(joint_x, joint_y)
+        panel_corners.each do |panel_corner|
+          distance_x = (corner[:x] - panel_corner[:x]).abs
+          distance_y = (corner[:y] - panel_corner[:y]).abs
+          if distance_x < CORNER_PROXIMITY && distance_y < CORNER_PROXIMITY
+            count += 1
+            break # Only count each panel once
+          end
         end
       end
+
+      count
     end
 
-    # Vertical adjacency: stacked panels
-    def vertical_joints
-      @by_col.each_value do |col|
-        col.combination(2).each do |p1, p2|
-          next unless (p1.bottom_edge - p2.y).abs < MAX_GAP ||
-                      (p2.bottom_edge - p1.y).abs < MAX_GAP
+    # Merge joints that are very close together (within CORNER_PROXIMITY)
+    def merge_nearby_joints(joints)
+      return [] if joints.empty?
 
-          overlap_left  = [p1.x, p2.x].max
-          overlap_right = [p1.right_edge, p2.right_edge].min
-          next if overlap_right <= overlap_left
+      merged = []
+      used = Set.new
 
-          joint_y = if p1.y < p2.y
-                      (p1.bottom_edge + p2.y) / 2.0
-                    else
-                      (p2.bottom_edge + p1.y) / 2.0
-                    end
+      joints.each_with_index do |joint, i|
+        next if used.include?(i)
 
-          joint_x = (overlap_left + overlap_right) / 2.0
+        # Find all joints near this one
+        cluster = [joint]
+        cluster_indices = [i]
 
-          add_joint(joint_x, joint_y)
+        joints.each_with_index do |other_joint, j|
+          next if i == j || used.include?(j)
+
+          distance_x = (joint.x - other_joint.x).abs
+          distance_y = (joint.y - other_joint.y).abs
+
+          if distance_x < CORNER_PROXIMITY && distance_y < CORNER_PROXIMITY
+            cluster << other_joint
+            cluster_indices << j
+          end
         end
+
+        # Mark all joints in this cluster as used
+        cluster_indices.each { |idx| used.add(idx) }
+
+        # Use the average position of the cluster
+        avg_x = cluster.sum(&:x) / cluster.size
+        avg_y = cluster.sum(&:y) / cluster.size
+        merged << Models::Joint.new(x: avg_x, y: avg_y)
       end
-    end
 
-    # 4-way joints: intersection of 2 horizontal and 2 vertical adjacencies
-    def four_way_joints
-      # Build a fast lookup of joints placed on horizontal/vertical lines
-      joints_by_x = @joints.group_by { |j| j.x.round(3) }
-      joints_by_y = @joints.group_by { |j| j.y.round(3) }
-
-      joints_by_x.each do |jx, column|
-        joints_by_y.each_key do |jy|
-          # If there is a joint on this X and also on this Y,
-          # it means horizontal + vertical edges cross → 4-way intersection.
-          intersection = column.find { |cj| cj.y.round(3) == jy }
-          next unless intersection
-
-          add_joint(jx, jy) # will dedupe automatically
-        end
-      end
-    end
-
-    def add_joint(x, y)
-      key = [x.round(3), y.round(3)]
-      return if @seen[key]
-
-      @seen[key] = true
-      @joints << Models::Joint.new(x: x, y: y)
+      merged
     end
   end
 end

@@ -25,32 +25,71 @@ module Calculators
     def calculate
       mounts = []
 
-      @panels.each do |panel|
-        panel_mounts = calculate_mounts_for_panel(panel)
-        mounts.concat(panel_mounts)
+      # Group panels by row (same y coordinate)
+      panels_by_row = @panels.group_by(&:y)
+
+      panels_by_row.each do |_y, row_panels|
+        # Sort panels by x position to identify first and last in row
+        sorted_panels = row_panels.sort_by(&:x)
+
+        sorted_panels.each_with_index do |panel, index|
+          is_last_in_row = (index == sorted_panels.size - 1)
+          panel_mounts = calculate_mounts_for_panel(panel, is_last_in_row)
+          mounts.concat(panel_mounts)
+        end
       end
 
-      mounts.uniq
+      deduplicate_mounts(mounts)
     end
 
     private
 
+    # Remove duplicate mounts and merge mounts that are very close together
+    def deduplicate_mounts(mounts)
+      return [] if mounts.empty?
+
+      # Group mounts by x coordinate (same rafter)
+      by_rafter = mounts.group_by { |m| m.x.round(2) }
+
+      unique_mounts = []
+      by_rafter.each do |_x, rafter_mounts|
+        # Sort by y coordinate
+        sorted = rafter_mounts.sort_by(&:y)
+
+        # Keep first mount
+        unique_mounts << sorted.first
+
+        # For remaining mounts, only add if they're far enough from previous
+        sorted[1..].each do |mount|
+          last_y = unique_mounts.last.y
+          # Only add if more than 1 unit away from the last mount on this rafter
+          unique_mounts << mount if (mount.y - last_y).abs > 1.0
+        end
+      end
+
+      unique_mounts
+    end
+
     # Calculate mounts for a single panel
     #
     # @param panel [Models::Panel] The panel to calculate mounts for
+    # @param is_last_in_row [Boolean] Whether this is the last panel in the row
     # @return [Array<Models::Mount>] Array of mounts for this panel
-    def calculate_mounts_for_panel(panel)
+    def calculate_mounts_for_panel(panel, is_last_in_row = false)
       available_rafters = find_available_rafters(panel)
       return [] if available_rafters.empty?
 
-      selected_rafters = select_rafters_for_panel(panel, available_rafters)
+      selected_rafters = select_rafters_for_panel(panel, available_rafters, is_last_in_row)
 
-      # Create mounts at the top edge of the panel
-      mount_y = panel.y
+      mounts = []
 
-      selected_rafters.map do |rafter_x|
-        Models::Mount.new(x: rafter_x, y: mount_y)
+      # Create mounts at both top and bottom edges of the panel
+      selected_rafters.each do |rafter_x|
+        mounts << Models::Mount.new(x: rafter_x, y: panel.y)
+        mounts << Models::Mount.new(x: rafter_x, y: panel.bottom_edge)
       end
+
+      mounts
     end
 
     # Find all rafters that intersect with the panel (with edge clearance)
@@ -83,46 +122,22 @@ module Calculators
     #
     # @param panel [Models::Panel] The panel
     # @param available_rafters [Array<Float>] Available rafter positions
+    # @param is_last_in_row [Boolean] Whether this is the last panel in the row
     # @return [Array<Float>] Selected rafter positions
-    def select_rafters_for_panel(panel, available_rafters)
-      return available_rafters if available_rafters.empty?
+    def select_rafters_for_panel(_panel, available_rafters, is_last_in_row = false)
+      return [] if available_rafters.empty?
 
-      selected = [available_rafters.first]
-
-      available_rafters.each do |rafter_x|
-        next if selected.include?(rafter_x)
-
-        add_rafter_if_needed(selected, rafter_x, available_rafters, panel)
-      end
-
-      ensure_cantilever_satisfied(selected, available_rafters, panel)
-      selected.sort
-    end
-
-    def add_rafter_if_needed(selected, rafter_x, available_rafters, panel)
-      span = rafter_x - selected.last
-
-      return unless span > SPAN_LIMIT || needs_rafter_for_next_span?(rafter_x, selected.last, available_rafters, panel)
-
-      selected << rafter_x
-    end
-
-    def needs_rafter_for_next_span?(current_rafter, last_selected, available_rafters, panel)
-      remaining = available_rafters.select { |r| r > current_rafter }
-
-      if remaining.empty?
-        (panel.right_edge - current_rafter) > CANTILEVER_LIMIT
+      if is_last_in_row
+        # Last panel in row gets 2 mounts
+        if available_rafters.size >= 2
+          [available_rafters.first, available_rafters.last]
+        else
+          available_rafters
+        end
       else
-        (remaining.first - last_selected) > SPAN_LIMIT
+        # Other panels get 1 mount (first available rafter)
+        [available_rafters.first]
       end
-    end
-
-    def ensure_cantilever_satisfied(selected, available_rafters, panel)
-      right_overhang = panel.right_edge - selected.last
-      return unless right_overhang > CANTILEVER_LIMIT
-      return if selected.include?(available_rafters.last)
-
-      selected << available_rafters.last
     end
   end
 end

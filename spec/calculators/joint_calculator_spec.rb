@@ -20,13 +20,13 @@ RSpec.describe Calculators::JointCalculator do
         expect(joints).not_to be_empty
       end
 
-      it 'places joint between the panels' do
+      it 'places joint at panel corner' do
         joints = calculator.calculate
 
-        # Joint should be between the two panels
+        # Joint should be at the corner where panels meet
         joint = joints.first
-        expect(joint.x).to be > panels[0].right_edge
-        expect(joint.x).to be < panels[1].x
+        expect(joint.x).to be_within(0.5).of(panels[0].right_edge)
+        expect(joint.x).to be_within(0.5).of(panels[1].x)
       end
     end
 
@@ -34,7 +34,9 @@ RSpec.describe Calculators::JointCalculator do
       let(:panels) do
         [
           Models::Panel.new(x: 0, y: 0, width: 44.7, height: 71.1),
-          Models::Panel.new(x: 0, y: 71.6, width: 44.7, height: 71.1)
+          Models::Panel.new(x: 0, y: 71.6, width: 44.7, height: 71.1),
+          Models::Panel.new(x: 45.05, y: 0, width: 44.7, height: 71.1),
+          Models::Panel.new(x: 45.05, y: 71.6, width: 44.7, height: 71.1)
         ]
       end
       let(:calculator) { described_class.new(panels: panels) }
@@ -45,13 +47,13 @@ RSpec.describe Calculators::JointCalculator do
         expect(joints).not_to be_empty
       end
 
-      it 'places joint between the panels vertically' do
+      it 'places joint at panel corner vertically' do
         joints = calculator.calculate
 
-        # Joint should be between the two panels vertically
-        joint = joints.first
-        expect(joint.y).to be > panels[0].bottom_edge
-        expect(joint.y).to be < panels[1].y
+        # Should have a joint where the vertical gap meets horizontal gap (interior corner)
+        vertical_joint = joints.find { |j| j.y > 70 && j.y < 73 }
+        expect(vertical_joint).not_to be_nil
+        expect(vertical_joint.y).to be_within(1.0).of(71.1)
       end
     end
 
