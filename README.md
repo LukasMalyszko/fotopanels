@@ -28,7 +28,7 @@ The solution follows SOLID principles with a modular, extensible architecture.
 - **Edge Clearance**: 2 units (minimum distance from panel edge)
 - **Cantilever Limit**: 16 units (maximum overhang from first/last support)
 - **Span Limit**: 48 units (maximum distance between consecutive supports)
-- **Joint Gap Threshold**: 1 unit (maximum gap for panel adjacency)
+- **Corner Proximity**: 0.5 units (maximum distance to merge nearby joints)
 
 ## Installation
 
@@ -61,6 +61,9 @@ The `example.rb` script demonstrates the calculator with the provided test data:
 
 ```bash
 ruby example.rb
+# Or use rake
+bundle exec rake example # Run example
+bundle exec rake         # Run tests
 ```
 
 This will:
@@ -169,7 +172,7 @@ The solution follows **SOLID principles**:
 Main service that validates input and coordinates calculations.
 
 **Public API:**
-- `calculate(panels_data, rafter_spacing: 16, first_rafter_x: 0)` → Returns `{ mounts: [...], joints: [...] }`
+- `calculate(panels_data, rafter_spacing: 16, first_rafter_x: 10)` → Returns `{ mounts: [...], joints: [...] }`
 
 #### `Models::Panel`
 Represents a solar panel with position and dimension data. Provides helper methods for adjacency detection.
@@ -191,40 +194,51 @@ Identifies and positions joints for:
 
 ### Mount Calculation
 1. For each panel, find all rafters within bounds (respecting edge clearance)
-2. Select rafters to satisfy constraints:
-   - First/last mount within cantilever limit from edges
-   - No two consecutive mounts exceed span limit
-3. Place mounts at vertical center of panel
+2. Select rafters based on panel position:
+   - Regular panels: 1 mount (first available rafter)
+   - Last panel in row: 2 mounts (first and last rafters)
+3. Place mounts at both top and bottom edges of panel
+4. Deduplicate nearby mounts (within 1 unit) on same rafter
 
 ### Joint Calculation
-1. **Horizontal joints**: Check all panel pairs for horizontal adjacency
-2. **Vertical joints**: Check all panel pairs for vertical adjacency
-3. **Corner joints**: Identify points where 4 panels meet
-4. Deduplicate to return unique positions
+1. For each panel, examine corners (top-right, bottom-left, bottom-right)
+2. Count how many panels share each corner location (within 0.5 units)
+3. Only create joints where 2+ panels meet (interior corners only)
+4. Merge nearby joints (within 0.5 units) using average position
+5. Excludes outer edge corners of the entire construction
 
 ## Example Output
 
 ```json
 {
   "mounts": [
-    { "x": 16.0, "y": 35.55 },
-    { "x": 32.0, "y": 35.55 },
-    { "x": 64.0, "y": 35.55 }
+    { "x": 10.0, "y": 0.0 },
+    { "x": 58.0, "y": 0.0 },
+    { "x": 10.0, "y": 71.1 },
+    { "x": 58.0, "y": 71.1 }
   ],
   "joints": [
-    { "x": 44.88, "y": 35.55 },
-    { "x": 89.93, "y": 35.55 }
+    { "x": 44.7, "y": 0.0 },
+    { "x": 44.88, "y": 71.1 },
+    { "x": 89.75, "y": 0.0 }
   ]
 }
 ```
 
 ## Error Handling
 
-The calculator validates input and raises `SolarPanelCalculator::InvalidInputError` for:
+The calculator validates input and raises errors for:
+
+**SolarPanelCalculator::InvalidInputError**:
 - Non-array input
 - Empty panel list
 - Missing x or y coordinates
 - Non-numeric coordinate values
+
+**ArgumentError** (in calculators):
+- Invalid panels array
+- Non-positive rafter spacing
+- Non-numeric first_rafter_x
 
 ## Testing
 
