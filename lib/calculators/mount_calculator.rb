@@ -13,7 +13,12 @@ module Calculators
     # @param panels [Array<Models::Panel>] Array of panel objects
     # @param rafter_spacing [Numeric] Distance between rafters
     # @param first_rafter_x [Numeric] X-coordinate of the first rafter
+    # @raise [ArgumentError] if inputs are invalid
     def initialize(panels:, rafter_spacing:, first_rafter_x:)
+      raise ArgumentError, 'panels must be an array' unless panels.is_a?(Array)
+      raise ArgumentError, 'rafter_spacing must be positive' unless rafter_spacing.is_a?(Numeric) && rafter_spacing > 0
+      raise ArgumentError, 'first_rafter_x must be numeric' unless first_rafter_x.is_a?(Numeric)
+
       @panels = panels
       @rafter_spacing = rafter_spacing
       @first_rafter_x = first_rafter_x

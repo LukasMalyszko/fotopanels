@@ -7,11 +7,21 @@ module Calculators
   class JointCalculator
     CORNER_PROXIMITY = 0.5 # Corners within this distance are joined
 
+    # @param panels [Array<Models::Panel>] Array of panel objects to analyze
+    # @raise [ArgumentError] if panels is not an array
     def initialize(panels:)
+      raise ArgumentError, 'panels must be an array' unless panels.is_a?(Array)
+
       @panels = panels
     end
 
-    # @return [Array<Models::Joint>]
+    # Calculate joint positions where panel corners meet
+    #
+    # Identifies interior corners where at least 2 panels meet and creates
+    # joints at those locations. Excludes outer edge corners. Merges nearby
+    # joints within CORNER_PROXIMITY distance.
+    #
+    # @return [Array<Models::Joint>] Array of joint objects at panel intersections
     def calculate
       joints = []
       seen = Set.new
